@@ -54,6 +54,21 @@ class Record:
     def add_phone(self, phone_number):
         self.phones.append(Phone(phone_number))
 
+
+    def edit_phone(self, old_phone, new_phone):
+        for phone in self.phones:
+            if str(phone) == old_phone:
+                phone.value = new_phone
+                return f"Phone number updated from {old_phone} to {new_phone} for {self.name.value}."
+        return f"Phone number {old_phone} not found for {self.name.value}."
+
+    def find_phone(self, phone_number):
+        for phone in self.phones:
+            if str(phone) == phone_number:
+                return f"Phone number {phone_number} found for {self.name.value}."
+        return f"Phone number {phone_number} not found for {self.name.value}."
+
+
     def remove_phone(self, phone_number):
         self.phones = [p for p in self.phones if str(p) != phone_number]
 
@@ -62,6 +77,8 @@ class Record:
         self.birthday = Birthday(birthday)
 
     def __str__(self):
+        birthday_info = f", birthday: {self.birthday.date.strftime('%d.%m.%Y')}" if self.birthday else ""
+        phones_info = '; '.join(str(phone) for phone in self.phones) if self.phones else "No phone numbers"
         return f"Contact name: {self.name.value}, phones: {'; '.join(p.value for p in self.phones)}"
 
 
@@ -92,7 +109,13 @@ class AddressBook(UserDict):
     def get_upcoming_birthday(self, days=7):
         upcoming_birthdays = self.find_next_birthday(days)
         if upcoming_birthdays:
-            return "\n".join(f"{name}: {birthday.strftime('%d.%m')}" for name, birthday in upcoming_birthdays)
+            adjusted_birthdays = []
+            for name, birthday in upcoming_birthdays:
+                adjusted_birthday = birthday
+                if adjusted_birthday.weekday() in [5, 6]:  
+                    adjusted_birthday += timedelta(days=1) 
+                adjusted_birthdays.append((name, adjusted_birthday))
+            return "\n".join(f"{name}: {birthday.strftime('%d.%m')}" for name, birthday in adjusted_birthdays)
         else:
             return "No upcoming birthdays in the next week."
 
@@ -126,14 +149,18 @@ def add_contact(args, book: AddressBook):
 @input_error
 def change_contact(args, book: AddressBook):
     if len(args) < 2:
-        return "Invalid command format. Usage: change [name] [new phone]"
-    name, new_phone = args
+        return "Invalid command format. Usage: change [name] [old phone] [new phone]"
+    name, old_phone, new_phone = args
     record = book.find(name)
     if record:
-        record.add_phone(new_phone)
-        return f"Phone number updated for {name}."
+        if old_phone in [str(phone) for phone in record.phones]:
+            record.edit_phone(old_phone, new_phone)
+            return f"Phone number updated for {name} from {old_phone} to {new_phone}."
+        else:
+            return f"Phone number {old_phone} not found for {name}."
     else:
         return f"Contact '{name}' not found."
+
 
 @input_error
 def show_phones(args, book: AddressBook):

@@ -104,9 +104,17 @@ class AddressBook(UserDict):
                 next_birthday = record.birthday._date.replace(year=today.year)
                 if next_birthday < today:
                     next_birthday = next_birthday.replace(year=today.year + 1)
+                    
+                if next_birthday.weekday() >= 5:
+                    next_birthday = self.find_next_weekday(next_birthday, 0)
+                
                 days_until_birthday = (next_birthday - today).days
                 if 0 < days_until_birthday <= days:
-                    upcoming_birthdays.append((name, next_birthday))
+                    congratulation_date_str = next_birthday.strftime('%Y.%m.%d')
+                    upcoming_birthdays.append({
+                        "name": record.name.value,
+                        "congratulation_date": congratulation_date_str
+                    })
 
         return upcoming_birthdays
 

@@ -101,27 +101,25 @@ class AddressBook(UserDict):
 
         for name, record in self.data.items():
             if record.birthday:
-                next_birthday = record.birthday._date.replace(year=today.year)
-                if next_birthday < today:
-                    next_birthday = next_birthday.replace(year=today.year + 1)
-                    
-                if next_birthday.weekday() >= 5:
-                    next_birthday = self.find_next_weekday(next_birthday, 0)
-                
+                birthday_date = record.birthday._date
+                next_birthday_year = today.year if birthday_date.month > today.month or (birthday_date.month == today.month and birthday_date.day >= today.day) else today.year + 1
+                next_birthday = birthday_date.replace(year=next_birthday_year)
+
+                if next_birthday.weekday() >= 5:  # If the birthday falls on a weekend
+                    next_birthday += timedelta(days=(7 - next_birthday.weekday()))  # Move to the next weekday
+
                 days_until_birthday = (next_birthday - today).days
                 if 0 < days_until_birthday <= days:
                     congratulation_date_str = next_birthday.strftime('%Y.%m.%d')
                     upcoming_birthdays.append({
-                        "name": record.name.value,
+                        "name": name,
                         "congratulation_date": congratulation_date_str
                     })
 
         return upcoming_birthdays
 
-
 def parse_input(user_input):
     return user_input.split()
-
 
 def input_error(func):
     def wrapper(*args, **kwargs):
@@ -134,6 +132,7 @@ def input_error(func):
         except IndexError:
             return "IndexError"
     return wrapper
+
 
 
 @input_error
@@ -213,21 +212,29 @@ def add_birthday(args, book: AddressBook):
         return f"Contact '{name}' not found."
 
 
+
 @input_error
 def birthdays(book: AddressBook):
     today = datetime.today().date()
     upcoming_birthdays = book.get_upcoming_birthdays()
+
     if not upcoming_birthdays:
         return "No upcoming birthdays within the specified days."
 
     output_lines = []
     for birthday_info in upcoming_birthdays:
-        name = birthday_info[0]
-        next_birthday = birthday_info[1]
-        days_until_birthday = (next_birthday - today).days
-        output_lines.append(f"Name: {name}, Next Birthday: {next_birthday.strftime('%d.%m.%Y')}, Days Until Birthday: {days_until_birthday}")
+        try:
+            name = birthday_info["name"]
+            next_birthday = datetime.strptime(birthday_info["congratulation_date"], '%Y.%m.%d').date()
+            days_until_birthday = (next_birthday - today).days
+            output_lines.append(f"Name: {name}, Next Birthday: {next_birthday.strftime('%d.%m.%Y')}, Days Until Birthday: {days_until_birthday}")
+        except KeyError as e:
+            return f"Unexpected data structure for upcoming birthdays: Missing key {e}."
 
     return "\n".join(output_lines)
+
+
+
 
 
 def main():
